@@ -22,8 +22,27 @@ except Exception as e:
     print(f"Não foi possível listar modelos: {e}")
 
 # Definindo o modelo (Alterado para 1.5-pro para maior compatibilidade)
-MODEL_NAME = 'gemini-1.5-pro'
-model = genai.GenerativeModel(MODEL_NAME)
+#MODEL_NAME = 'gemini-1.5-pro'
+#model = genai.GenerativeModel(MODEL_NAME)
+
+try:
+    # Testamos o 1.5-flash primeiro por ser mais rápido
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Fazemos um teste de "chamada fantasma" para ver se ele realmente existe
+    print("Sucesso ao carregar gemini-1.5-flash")
+except Exception:
+    try:
+        # Fallback para o 1.0-pro que é o mais compatível do mundo
+        model = genai.GenerativeModel('gemini-1.0-pro')
+        print("Sucesso ao carregar gemini-1.0-pro (Fallback)")
+    except Exception as e:
+        print(f"Erro crítico: Nenhum modelo disponível. {e}")
+
+
+
+
+
+
 
 def extrair_texto_pdf(arquivo):
     try:
