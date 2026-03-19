@@ -2,31 +2,21 @@ import os
 import json
 from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
+from pypdf import PdfReader
 from dotenv import load_dotenv
 
 load_dotenv()
-
 app = Flask(__name__)
 
-# Configuração da API
-api_key = os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=api_key)
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-def classificar_e_responder(texto_email):
-    prompt = f"""
-    Atue como um assistente de triagem de emails corporativos.
-    Analise o email abaixo e responda EXATAMENTE no formato JSON:
-    {{
-        "categoria": "Produtivo" ou "Improdutivo",
-        "justificativa": "breve explicação",
-        "resposta_sugerida": "uma sugestão de resposta educada"
-    }}
-
-    Email: {texto_email}
-    """
-    response = model.generate_content(prompt)
-    return response.text
+def extrair_texto_pdf(arquivo):
+    leitor = PdfReader(arquivo)
+    texto = ""
+    for pagina in leitor.pages:
+        texto += pagina.extract_text()
+    return texto
 
 @app.route('/')
 def index():
@@ -34,27 +24,31 @@ def index():
 
 @app.route('/processar', methods=['POST'])
 def processar():
-    data = request.json
-    texto = data.get('texto', '')
+    texto_final = ""
+
+    # Verifica se foi enviado um arquivo
+    if 'arquivo' in request.files:
+        arquivo = request.files['arquivo']
+        if arquivo.filename == '':
+            return jsonify({"error": "Arquivo sem nome"}), 400
+        
+        if arquivo.filename.endswith('.pdf'):
+            texto_final = extrair_texto_pdf(arquivo)
+        elif arquivo.filename.endswith('.txt'):
+            texto_final = arquivo.read().decode('utf-8')
     
-    if not texto:
-        return jsonify({"error": "Texto vazio"}), 400
+    # Se não for arquivo, tenta pegar o texto do formulário
+    else:
+        texto_final = request.form.get('texto', '')
+
+    if not texto_final:
+        return jsonify({"error": "Nenhum conteúdo encontrado"}), 400
 
     try:
-        resultado_bruto = classificar_e_responder(texto)
         
-        # Limpa blocos de código markdown se existirem
-        resultado_limpo = resultado_bruto.replace('```json', '').replace('```', '').strip()
-        
-        # Converte para dicionário para garantir que o retorno seja JSON válido
-        dados_json = json.loads(resultado_limpo)
-        return jsonify(dados_json)
-        
+        prompt = f"Analise o email/documento e responda em JSON: {texto_final}"
+        response = model.generate_content(prompt)
+        resultado_limpo = response.text.replace('```json', '').replace('```', '').strip()
+        return jsonify(json.loads(resultado_limpo))
     except Exception as e:
-        print(f"Erro no processamento: {e}") # Aparecerá nos logs do Render
         return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    # Configuração vital para o Render reconhecer a porta
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
