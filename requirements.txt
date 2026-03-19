@@ -1,9 +1,3 @@
-#Flask
-#google-generativeai
-#python-dotenv
-#gunicorn
-#pypdf
-
 flask
 google-generativeai>=0.5.0
 python-dotenv

@@ -5,13 +5,31 @@ import google.generativeai as genai
 from pypdf import PdfReader
 from dotenv import load_dotenv
 
+
+
 load_dotenv()
 app = Flask(__name__)
 
 # Configuração da IA
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 #model = genai.GenerativeModel('gemini-1.5-flash')
-model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+#model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+#model = genai.GenerativeModel('gemini-1.0-pro')
+
+
+try:
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Teste rápido para validar o modelo
+    print("Modelo Gemini 1.5 Flash carregado com sucesso.")
+except:
+    model = genai.GenerativeModel('gemini-1.0-pro')
+    print("Usando Gemini 1.0 Pro como fallback.")
+
+
+
+
+
+
 
 def extrair_texto_pdf(arquivo):
     leitor = PdfReader(arquivo)
