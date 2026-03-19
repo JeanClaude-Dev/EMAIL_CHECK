@@ -1,48 +1,15 @@
 import os
 import json
-import google.generativeai as genai
 from flask import Flask, render_template, request, jsonify
+from groq import Groq
 from pypdf import PdfReader
 from dotenv import load_dotenv
 
 load_dotenv()
 app = Flask(__name__)
 
-# --- CONFIGURAÇÃO DA IA ---
-api_key = os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=api_key)
-
-# Debug: Lista os modelos disponíveis nos LOGS do Render para conferência
-print("--- Verificando Modelos Disponíveis ---")
-try:
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            print(f"Modelo Detectado: {m.name}")
-except Exception as e:
-    print(f"Não foi possível listar modelos: {e}")
-
-# Definindo o modelo (Alterado para 1.5-pro para maior compatibilidade)
-#MODEL_NAME = 'gemini-1.5-pro'
-#model = genai.GenerativeModel(MODEL_NAME)
-
-try:
-    # Testamos o 1.5-flash primeiro por ser mais rápido
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    # Fazemos um teste de "chamada fantasma" para ver se ele realmente existe
-    print("Sucesso ao carregar gemini-1.5-flash")
-except Exception:
-    try:
-        # Fallback para o 1.0-pro que é o mais compatível do mundo
-        model = genai.GenerativeModel('gemini-1.0-pro')
-        print("Sucesso ao carregar gemini-1.0-pro (Fallback)")
-    except Exception as e:
-        print(f"Erro crítico: Nenhum modelo disponível. {e}")
-
-
-
-
-
-
+# Configuração Groq
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def extrair_texto_pdf(arquivo):
     try:
@@ -50,11 +17,10 @@ def extrair_texto_pdf(arquivo):
         texto = ""
         for pagina in leitor.pages:
             content = pagina.extract_text()
-            if content:
-                texto += content
+            if content: texto += content
         return texto
     except Exception as e:
-        return f"Erro ao ler PDF: {str(e)}"
+        return f"Erro no PDF: {str(e)}"
 
 @app.route('/')
 def index():
@@ -64,7 +30,6 @@ def index():
 def processar():
     texto_final = ""
 
-    # 1. Captura de Arquivos
     if 'arquivo' in request.files:
         arquivo = request.files['arquivo']
         if arquivo.filename != '':
@@ -73,33 +38,34 @@ def processar():
             elif arquivo.filename.endswith('.txt'):
                 texto_final = arquivo.read().decode('utf-8')
     
-    # 2. Captura de Texto Manual (se não houver arquivo)
     if not texto_final:
         texto_final = request.form.get('texto', '')
 
     if not texto_final:
-        return jsonify({"error": "Nenhum conteúdo para analisar"}), 400
+        return jsonify({"error": "Conteúdo vazio"}), 400
 
     try:
-        # Prompt rigoroso para JSON
-        prompt = (
-            "Analise este e-mail corporativo. "
-            "Responda APENAS um objeto JSON puro, sem markdown, com estas chaves: "
-            "'categoria' (Produtivo/Improdutivo), 'justificativa', 'resposta_sugerida'. "
-            f"Texto: {texto_final}"
+        # Chamada ao modelo Llama 3.1 via Groq
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Você é um assistente de triagem de emails. Responda APENAS em JSON puro com as chaves: categoria (Produtivo ou Improdutivo), justificativa e resposta_sugerida."
+                },
+                {
+                    "role": "user",
+                    "content": f"Analise este conteúdo: {texto_final}",
+                }
+            ],
+            model="llama-3.1-70b-versatile",
+            response_format={"type": "json_object"} # Isso garante que venha um JSON válido
         )
 
-        response = model.generate_content(prompt)
-        
-        # Limpeza de possíveis blocos de código markdown
-        raw_text = response.text
-        clean_json = raw_text.replace('```json', '').replace('```', '').strip()
-        
-        return jsonify(json.loads(clean_json))
+        resultado = chat_completion.choices[0].message.content
+        return jsonify(json.loads(resultado))
 
     except Exception as e:
-        print(f"ERRO NA IA: {str(e)}")
-        return jsonify({"error": f"Erro na API Gemini: {str(e)}"}), 500
+        return jsonify({"error": f"Erro no Groq: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
