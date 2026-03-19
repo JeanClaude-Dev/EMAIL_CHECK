@@ -1,4 +1,4 @@
-# 📧 Classificador de E-mails com IA (Llama 3.3)
+# 📧 Classificador de E-mails com IA 
 
 Este projeto é uma ferramenta de triagem automatizada para e-mails corporativos. Utilizando inteligência artificial de última geração, o sistema classifica mensagens entre **Produtivas** e **Improdutivas**, extraindo justificativas e sugerindo respostas automáticas de forma instantânea.
 
