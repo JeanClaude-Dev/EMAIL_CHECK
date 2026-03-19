@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
+# Configuração da IA
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -26,7 +27,6 @@ def index():
 def processar():
     texto_final = ""
 
-    # Verifica se foi enviado um arquivo
     if 'arquivo' in request.files:
         arquivo = request.files['arquivo']
         if arquivo.filename == '':
@@ -36,8 +36,6 @@ def processar():
             texto_final = extrair_texto_pdf(arquivo)
         elif arquivo.filename.endswith('.txt'):
             texto_final = arquivo.read().decode('utf-8')
-    
-    # Se não for arquivo, tenta pegar o texto do formulário
     else:
         texto_final = request.form.get('texto', '')
 
@@ -45,10 +43,20 @@ def processar():
         return jsonify({"error": "Nenhum conteúdo encontrado"}), 400
 
     try:
-        
-        prompt = f"Analise o email/documento e responda em JSON: {texto_final}"
+        # Prompt otimizado para garantir JSON puro
+        prompt = f"Analise o email/documento e responda EXATAMENTE no formato JSON: {texto_final}"
         response = model.generate_content(prompt)
+        
+        # Limpeza de markdown
         resultado_limpo = response.text.replace('```json', '').replace('```', '').strip()
+        
         return jsonify(json.loads(resultado_limpo))
     except Exception as e:
+        print(f"Erro detectado: {e}") # Isso ajuda a ver o erro nos logs do Render
         return jsonify({"error": str(e)}), 500
+
+# --- ESTA PARTE É ESSENCIAL PARA O RENDER ---
+if __name__ == '__main__':
+    # O Render exige que o host seja 0.0.0.0 e a porta venha da variável de ambiente
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
