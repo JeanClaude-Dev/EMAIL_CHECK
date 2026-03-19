@@ -1,42 +1,41 @@
 import os
 import json
-from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
+from flask import Flask, render_template, request, jsonify
 from pypdf import PdfReader
 from dotenv import load_dotenv
-
-
 
 load_dotenv()
 app = Flask(__name__)
 
-# Configuração da IA
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-#model = genai.GenerativeModel('gemini-1.5-flash')
-#model = genai.GenerativeModel(model_name='gemini-1.5-flash')
-#model = genai.GenerativeModel('gemini-1.0-pro')
+# --- CONFIGURAÇÃO DA IA ---
+api_key = os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=api_key)
 
-
+# Debug: Lista os modelos disponíveis nos LOGS do Render para conferência
+print("--- Verificando Modelos Disponíveis ---")
 try:
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    # Teste rápido para validar o modelo
-    print("Modelo Gemini 1.5 Flash carregado com sucesso.")
-except:
-    model = genai.GenerativeModel('gemini-1.0-pro')
-    print("Usando Gemini 1.0 Pro como fallback.")
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            print(f"Modelo Detectado: {m.name}")
+except Exception as e:
+    print(f"Não foi possível listar modelos: {e}")
 
-
-
-
-
-
+# Definindo o modelo (Alterado para 1.5-pro para maior compatibilidade)
+MODEL_NAME = 'gemini-1.5-pro'
+model = genai.GenerativeModel(MODEL_NAME)
 
 def extrair_texto_pdf(arquivo):
-    leitor = PdfReader(arquivo)
-    texto = ""
-    for pagina in leitor.pages:
-        texto += pagina.extract_text()
-    return texto
+    try:
+        leitor = PdfReader(arquivo)
+        texto = ""
+        for pagina in leitor.pages:
+            content = pagina.extract_text()
+            if content:
+                texto += content
+        return texto
+    except Exception as e:
+        return f"Erro ao ler PDF: {str(e)}"
 
 @app.route('/')
 def index():
@@ -46,36 +45,43 @@ def index():
 def processar():
     texto_final = ""
 
+    # 1. Captura de Arquivos
     if 'arquivo' in request.files:
         arquivo = request.files['arquivo']
-        if arquivo.filename == '':
-            return jsonify({"error": "Arquivo sem nome"}), 400
-        
-        if arquivo.filename.endswith('.pdf'):
-            texto_final = extrair_texto_pdf(arquivo)
-        elif arquivo.filename.endswith('.txt'):
-            texto_final = arquivo.read().decode('utf-8')
-    else:
+        if arquivo.filename != '':
+            if arquivo.filename.endswith('.pdf'):
+                texto_final = extrair_texto_pdf(arquivo)
+            elif arquivo.filename.endswith('.txt'):
+                texto_final = arquivo.read().decode('utf-8')
+    
+    # 2. Captura de Texto Manual (se não houver arquivo)
+    if not texto_final:
         texto_final = request.form.get('texto', '')
 
     if not texto_final:
-        return jsonify({"error": "Nenhum conteúdo encontrado"}), 400
+        return jsonify({"error": "Nenhum conteúdo para analisar"}), 400
 
     try:
-        # Prompt otimizado para garantir JSON puro
-        prompt = f"Analise o email/documento e responda EXATAMENTE no formato JSON: {texto_final}"
+        # Prompt rigoroso para JSON
+        prompt = (
+            "Analise este e-mail corporativo. "
+            "Responda APENAS um objeto JSON puro, sem markdown, com estas chaves: "
+            "'categoria' (Produtivo/Improdutivo), 'justificativa', 'resposta_sugerida'. "
+            f"Texto: {texto_final}"
+        )
+
         response = model.generate_content(prompt)
         
-        # Limpeza de markdown
-        resultado_limpo = response.text.replace('```json', '').replace('```', '').strip()
+        # Limpeza de possíveis blocos de código markdown
+        raw_text = response.text
+        clean_json = raw_text.replace('```json', '').replace('```', '').strip()
         
-        return jsonify(json.loads(resultado_limpo))
-    except Exception as e:
-        print(f"Erro detectado: {e}") # Isso ajuda a ver o erro nos logs do Render
-        return jsonify({"error": str(e)}), 500
+        return jsonify(json.loads(clean_json))
 
-# --- ESTA PARTE É ESSENCIAL PARA O RENDER ---
+    except Exception as e:
+        print(f"ERRO NA IA: {str(e)}")
+        return jsonify({"error": f"Erro na API Gemini: {str(e)}"}), 500
+
 if __name__ == '__main__':
-    # O Render exige que o host seja 0.0.0.0 e a porta venha da variável de ambiente
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
