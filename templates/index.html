@@ -3,74 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triagem de Email</title>
+    <title>Classificador de E-mails IA</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .drag-over { border-color: #07b458; background-color: #f0fdf4; }
-    </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-100 min-h-screen p-4 md:p-10">
 
-    <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
-        <h1 class="text-2xl font-bold text-slate-800 mb-2">Classificador de Emails Pro</h1>
-        <p class="text-slate-500 mb-6">Arraste um PDF/TXT ou digite o conteúdo abaixo.</p>
+    <div class="max-w-3xl mx-auto bg-white shadow-xl rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Triagem de E-mails</h1>
 
-        <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-lg p-10 text-center transition-all cursor-pointer hover:border-blue-400 mb-6">
-            <p class="text-slate-600" id="drop-text">Arraste seu arquivo aqui ou <span class="text-blue-600 font-semibold">clique para subir</span></p>
-            <input type="file" id="file-input" class="hidden" accept=".pdf,.txt">
-            <p id="file-name" class="mt-2 text-sm font-medium text-green-600 hidden"></p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Cole o texto do e-mail:</label>
+                <textarea id="texto-email" rows="6" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-green-500 focus:border-green-500" placeholder="Insira o conteúdo aqui..."></textarea>
+            </div>
+
+            <div class="flex items-center justify-center w-full">
+                <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Clique para subir</span> ou arraste um PDF/TXT</p>
+                    </div>
+                    <input type="file" id="file-input" class="hidden" accept=".pdf,.txt" />
+                </label>
+            </div>
+            <p id="file-info" class="text-sm text-green-600 font-semibold hidden"></p>
+
+            <button onclick="processarConteudo()" id="btn-enviar" class="w-full bg-[#07b458] text-white font-bold py-3 rounded-md hover:bg-green-700 transition-all">
+                Analisar E-mail
+            </button>
         </div>
 
-        <textarea id="texto-email" rows="5" class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none mb-4" placeholder="Ou cole o texto do email aqui..."></textarea>
-
-        <button onclick="processarConteudo()" id="btn-enviar" class="w-full bg-[#07b458] hover:bg-[#069e4d] text-white font-bold py-3 rounded-md transition-colors shadow-md">
-            Analisar com Gemini IA
-        </button>
-
-        <div id="resultado" class="mt-8 hidden">
-            <h3 class="font-bold text-lg mb-2">Resultado da Análise:</h3>
-            <div class="p-4 rounded-md border" id="resultado-card">
-                <p><strong>Categoria:</strong> <span id="res-cat"></span></p>
-                <p class="mt-2"><strong>Justificativa:</strong> <span id="res-just"></span></p>
-                <div class="mt-4 p-3 bg-slate-100 rounded border border-slate-200">
-                    <p class="text-xs text-slate-500 uppercase font-bold">Sugestão de Resposta:</p>
-                    <p id="res-sugestao" class="italic italic text-slate-700"></p>
+        <div id="resultado-container" class="mt-8 hidden border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Resultado da Análise</h2>
+            <div id="card-status" class="p-4 rounded-lg border">
+                <p class="text-lg"><strong>Categoria:</strong> <span id="res-categoria"></span></p>
+                <p class="mt-2 text-gray-700"><strong>Justificativa:</strong> <span id="res-justificativa"></span></p>
+                <div class="mt-4 p-3 bg-gray-50 border rounded">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Sugestão de Resposta:</p>
+                    <p id="res-sugerida" class="text-gray-800 italic mt-1"></p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const fileNameDisplay = document.getElementById('file-name');
-        let arquivoSelecionado = null;
+       
+        async function processarConteudo() {
+            const btn = document.getElementById('btn-enviar');
+            const textoArea = document.getElementById('texto-email');
+            const fileInput = document.getElementById('file-input');
+            
+            const textoManual = textoArea.value;
+            const arquivo = fileInput.files[0];
 
-        // Abrir seletor de arquivo ao clicar na zona
-        dropZone.onclick = () => fileInput.click();
+            if (!textoManual && !arquivo) {
+                alert("Por favor, digite um texto ou selecione um arquivo.");
+                return;
+            }
 
-        fileInput.onchange = (e) => lidarComArquivo(e.target.files[0]);
+            btn.disabled = true;
+            btn.innerText = "Processando com IA...";
 
-        // Drag & Drop events
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
-        dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            lidarComArquivo(e.dataTransfer.files[0]);
-        };
-
-        function lidarComArquivo(file) {
-            if (file && (file.type === "application/pdf" || file.type === "text/plain")) {
-                arquivoSelecionado = file;
-                fileNameDisplay.innerText = `Arquivo pronto: ${file.name}`;
-                fileNameDisplay.classList.remove('hidden');
-                document.getElementById('drop-text').classList.add('hidden');
+            const formData = new FormData();
+            if (arquivo) {
+                formData.append('arquivo', arquivo);
             } else {
-                alert("Por favor, envie apenas PDF ou TXT.");
+                formData.append('texto', textoManual);
+            }
+
+            try {
+                const response = await fetch('/processar', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    exibirResultado(data);
+                } else {
+                    alert("Erro: " + (data.error || "Erro desconhecido no servidor"));
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao conectar com o servidor. Verifique se o app no Render está ativo.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Analisar E-mail";
             }
         }
 
-        async function processarConteudo() {
-            const btn = document.getElementById('btn-enviar');
-            const textoManual = document.getElementById('texto-email
+        function exibirResultado(data) {
+            document.getElementById('resultado-container').classList.remove('hidden');
+            document.getElementById('res-categoria').innerText = data.categoria;
+            document.getElementById('res-justificativa').innerText = data.justificativa;
+            document.getElementById('res-sugerida').innerText = data.resposta_sugerida;
+
+            const card = document.getElementById('card-status');
+            if (data.categoria === 'Produtivo') {
+                card.className = "p-4 rounded-lg border border-green-300 bg-green-50";
+            } else {
+                card.className = "p-4 rounded-lg border border-red-300 bg-red-50";
+            }
+        }
+
+        // Mostrar nome do arquivo selecionado
+        document.getElementById('file-input').addEventListener('change', function() {
+            const info = document.getElementById('file-info');
+            if (this.files[0]) {
+                info.innerText = "Arquivo selecionado: " + this.files[0].name;
+                info.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
