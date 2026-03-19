@@ -9,7 +9,7 @@
 <body class="bg-gray-100 min-h-screen p-4 md:p-10">
 
     <div class="max-w-3xl mx-auto bg-white shadow-xl rounded-lg p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Triagem de E-mails</h1>
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Triagem de E-mails com Llama 3.3</h1>
 
         <div class="space-y-4">
             <div>
@@ -27,9 +27,14 @@
             </div>
             <p id="file-info" class="text-sm text-green-600 font-semibold hidden"></p>
 
-            <button onclick="processarConteudo()" id="btn-enviar" class="w-full bg-[#07b458] text-white font-bold py-3 rounded-md hover:bg-green-700 transition-all">
-                Analisar E-mail
-            </button>
+            <div class="flex gap-4">
+                <button onclick="processarConteudo()" id="btn-enviar" class="flex-1 bg-[#07b458] text-white font-bold py-3 rounded-md hover:bg-green-700 transition-all">
+                    Analisar E-mail
+                </button>
+                <button onclick="limparAnalise()" id="btn-limpar" class="px-6 bg-gray-200 text-gray-700 font-bold py-3 rounded-md hover:bg-gray-300 transition-all">
+                    Limpar
+                </button>
+            </div>
         </div>
 
         <div id="resultado-container" class="mt-8 hidden border-t pt-6">
@@ -46,7 +51,6 @@
     </div>
 
     <script>
-       
         async function processarConteudo() {
             const btn = document.getElementById('btn-enviar');
             const textoArea = document.getElementById('texto-email');
@@ -85,7 +89,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                alert("Erro ao conectar com o servidor. Verifique se o app no Render está ativo.");
+                alert("Erro ao conectar com o servidor.");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Analisar E-mail";
@@ -106,7 +110,20 @@
             }
         }
 
-        // Mostrar nome do arquivo selecionado
+        function limparAnalise() {
+            // Limpa campos de entrada
+            document.getElementById('texto-email').value = "";
+            document.getElementById('file-input').value = "";
+            
+            // Esconde info do arquivo e resultados
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('resultado-container').classList.add('hidden');
+            
+            // Reseta botões
+            document.getElementById('btn-enviar').disabled = false;
+            document.getElementById('btn-enviar').innerText = "Analisar E-mail";
+        }
+
         document.getElementById('file-input').addEventListener('change', function() {
             const info = document.getElementById('file-info');
             if (this.files[0]) {
