@@ -10,7 +10,8 @@ app = Flask(__name__)
 
 # Configuração da IA
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+#model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
 def extrair_texto_pdf(arquivo):
     leitor = PdfReader(arquivo)
