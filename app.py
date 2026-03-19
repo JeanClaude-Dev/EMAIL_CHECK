@@ -7,7 +7,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configure sua API KEY do Google Gemini aqui ou no arquivo .env
+# Configure sua API KEY no arquivo .env
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -18,7 +18,7 @@ def classificar_e_responder(texto_email):
     {{
         "categoria": "Produtivo" ou "Improdutivo",
         "justificativa": "breve explicação",
-        "resposta_sugerida": "uma sugestão de resposta educada"
+        "resposta_sugerida": "Resposta sugerida"
     }}
 
     Email: {texto_email}
@@ -30,6 +30,14 @@ def classificar_e_responder(texto_email):
 def index():
     return render_template('index.html')
 
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+import json 
+
 @app.route('/processar', methods=['POST'])
 def processar():
     data = request.json
@@ -39,13 +47,14 @@ def processar():
         return jsonify({"error": "Texto vazio"}), 400
 
     try:
-        # Chamada para a IA
         resultado_bruto = classificar_e_responder(texto)
-        # Limpeza simples caso a IA retorne markdown
+        # Limpa os marcadores de Markdown
         resultado_limpo = resultado_bruto.replace('```json', '').replace('```', '').strip()
-        return resultado_limpo
+        
+        # Converte a string Python real
+        dados_json = json.loads(resultado_limpo)
+        
+        return jsonify(dados_json) # Retorna como JSON puro 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        print(f"Erro no servidor: {e}") 
+        return jsonify({"error": "Falha ao processar o email. Verifique a API Key."}), 500
