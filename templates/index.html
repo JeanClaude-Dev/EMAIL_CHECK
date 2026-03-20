@@ -154,7 +154,7 @@
 <body>
 
     <div class="container">
-        <img src="../banner.png" class="banner">
+        <img src="banner.png" class="banner">
 
         <div class="content">
             <h1>Triagem de E-mails</h1>
@@ -188,7 +188,7 @@
     </div>
 
     <script>
-        // Lógica mantida do seu código original
+       
         async function processarConteudo() {
             const btn = document.getElementById('btn-enviar');
             const textoArea = document.getElementById('texto-email');
@@ -211,4 +211,39 @@
                 const response = await fetch('/processar', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (response.ok) exibirResultado(data);
-                else alert("Erro: "
+                else alert("Erro: " + (data.error || "Erro desconhecido"));
+            } catch (error) {
+                alert("Erro ao conectar com o servidor.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Analisar E-mail";
+            }
+        }
+
+        function exibirResultado(data) {
+            document.getElementById('resultado-container').classList.remove('hidden');
+            document.getElementById('res-categoria').innerText = data.categoria;
+            document.getElementById('res-justificativa').innerText = data.justificativa;
+            document.getElementById('res-sugerida').innerText = data.resposta_sugerida;
+
+            const card = document.getElementById('card-status');
+            card.className = "card-status " + (data.categoria === 'Produtivo' ? 'status-produtivo' : 'status-improdutivo');
+        }
+
+        function limparAnalise() {
+            document.getElementById('texto-email').value = "";
+            document.getElementById('file-input').value = "";
+            document.getElementById('file-info').style.display = "none";
+            document.getElementById('resultado-container').classList.add('hidden');
+        }
+
+        document.getElementById('file-input').addEventListener('change', function() {
+            const info = document.getElementById('file-info');
+            if (this.files[0]) {
+                info.innerText = "Arquivo: " + this.files[0].name;
+                info.style.display = "block";
+            }
+        });
+    </script>
+</body>
+</html>
