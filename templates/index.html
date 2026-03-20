@@ -4,56 +4,183 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classificador de E-mails IA</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-green: #07b458;
+            --hover-green: #069d4d;
+            --bg-gray: #f3f4f6;
+            --text-dark: #1f2937;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-gray);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            color: var(--text-dark);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 768px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .banner {
+            width: 100%;
+            display: block;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 2px rgba(7, 180, 88, 0.2);
+        }
+
+        /* Área de Upload */
+        .upload-area {
+            margin: 20px 0;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            background: #f9fafb;
+            text-align: center;
+            padding: 30px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #f3f4f6;
+        }
+
+        .upload-area span {
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+
+        /* Botões */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            flex: 2;
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .btn-primary:hover { background: var(--hover-green); }
+        .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .btn-secondary {
+            flex: 1;
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .btn-secondary:hover { background: #d1d5db; }
+
+        /* Resultados */
+        .resultado-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .hidden { display: none; }
+
+        .card-status {
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .status-produtivo { background: #ecfdf5; border-color: #6ee7b7; }
+        .status-improdutivo { background: #fef2f2; border-color: #fca5a5; }
+
+        .sugestao-box {
+            margin-top: 15px;
+            background: rgba(255,255,255,0.5);
+            padding: 10px;
+            border-radius: 4px;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 md:p-10">
+<body>
 
-    <div class="max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
-        
-        <div class="w-full"> 
-            <img src="../banner.png" alt="Banner Análise de E-mails" class="w-full h-auto object-cover border-b border-gray-200">
-        </div>
+    <div class="container">
+        <img src="../banner.png" class="banner">
 
-        <div class="p-6 md:p-8">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">Triagem de E-mails</h1>
+        <div class="content">
+            <h1>Triagem de E-mails</h1>
 
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Cole o texto do e-mail:</label>
-                    <textarea id="texto-email" rows="6" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-green-500 focus:border-green-500 outline-none" placeholder="Insira o conteúdo aqui..."></textarea>
-                </div>
+            <label>Cole o texto do e-mail:</label>
+            <textarea id="texto-email" rows="6" placeholder="Insira o conteúdo aqui..."></textarea>
 
-                <div class="flex items-center justify-center w-full">
-                    <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <p class="mb-2 text-sm text-gray-500 text-center px-4">
-                                <span class="font-semibold text-green-600">Clique para anexar documento</span><br>ou arraste um PDF/TXT
-                            </p>
-                        </div>
-                        <input type="file" id="file-input" class="hidden" accept=".pdf,.txt" />
-                    </label>
-                </div>
-                <p id="file-info" class="text-sm text-green-600 font-semibold hidden"></p>
+            <div class="upload-area" onclick="document.getElementById('file-input').click()">
+                <p><span>Clique para anexar documento</span><br>ou arraste um PDF/TXT</p>
+                <input type="file" id="file-input" style="display:none" accept=".pdf,.txt">
+            </div>
+            <p id="file-info" style="color: var(--primary-green); font-weight: bold; display: none; font-size: 0.8rem;"></p>
 
-                <div class="flex gap-4">
-                    <button onclick="processarConteudo()" id="btn-enviar" class="flex-1 bg-[#07b458] text-white font-bold py-3 rounded-md hover:bg-green-700 transition-all shadow-md">
-                        Analisar E-mail
-                    </button>
-                    <button onclick="limparAnalise()" id="btn-limpar" class="px-6 bg-gray-200 text-gray-700 font-bold py-3 rounded-md hover:bg-gray-300 transition-all">
-                        Limpar
-                    </button>
-                </div>
+            <div class="btn-group">
+                <button onclick="processarConteudo()" id="btn-enviar" class="btn btn-primary">Analisar E-mail</button>
+                <button onclick="limparAnalise()" id="btn-limpar" class="btn btn-secondary">Limpar</button>
             </div>
 
-            <div id="resultado-container" class="mt-8 hidden border-t pt-6">
-                <h2 class="text-xl font-semibold mb-4 text-gray-800 border-l-4 border-[#07b458] pl-3">Resultado da Análise</h2>
-                <div id="card-status" class="p-5 rounded-lg border shadow-sm">
-                    <p class="text-lg"><strong>Categoria:</strong> <span id="res-categoria"></span></p>
-                    <p class="mt-3 text-gray-700 text-sm md:text-base leading-relaxed"><strong>Justificativa:</strong> <span id="res-justificativa"></span></p>
-                    
-                    <div class="mt-5 p-4 bg-gray-50 border border-gray-200 rounded-md">
-                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sugestão de Resposta:</p>
-                        <p id="res-sugerida" class="text-gray-800 italic leading-relaxed"></p>
+            <div id="resultado-container" class="resultado-container hidden">
+                <h2 style="border-left: 4px solid var(--primary-green); padding-left: 10px; font-size: 1.2rem;">Resultado</h2>
+                <div id="card-status" class="card-status">
+                    <p><strong>Categoria:</strong> <span id="res-categoria"></span></p>
+                    <p><strong>Justificativa:</strong> <span id="res-justificativa"></span></p>
+                    <div class="sugestao-box">
+                        <strong>Sugestão de Resposta:</strong><br>
+                        <span id="res-sugerida"></span>
                     </div>
                 </div>
             </div>
@@ -61,15 +188,14 @@
     </div>
 
     <script>
-        // ... (Mantive suas funções originais de processarConteudo, exibirResultado e limparAnalise)
+        // Lógica mantida do seu código original
         async function processarConteudo() {
             const btn = document.getElementById('btn-enviar');
             const textoArea = document.getElementById('texto-email');
             const fileInput = document.getElementById('file-input');
-            const textoManual = textoArea.value;
             const arquivo = fileInput.files[0];
 
-            if (!textoManual && !arquivo) {
+            if (!textoArea.value && !arquivo) {
                 alert("Por favor, digite um texto ou selecione um arquivo.");
                 return;
             }
@@ -78,56 +204,11 @@
             btn.innerText = "Processando com IA...";
 
             const formData = new FormData();
-            if (arquivo) {
-                formData.append('arquivo', arquivo);
-            } else {
-                formData.append('texto', textoManual);
-            }
+            if (arquivo) formData.append('arquivo', arquivo);
+            else formData.append('texto', textoArea.value);
 
             try {
                 const response = await fetch('/processar', { method: 'POST', body: formData });
                 const data = await response.json();
-                if (response.ok) { exibirResultado(data); } 
-                else { alert("Erro: " + (data.error || "Erro desconhecido")); }
-            } catch (error) {
-                console.error(error);
-                alert("Erro ao conectar com o servidor.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Analisar E-mail";
-            }
-        }
-
-        function exibirResultado(data) {
-            document.getElementById('resultado-container').classList.remove('hidden');
-            document.getElementById('res-categoria').innerText = data.categoria;
-            document.getElementById('res-justificativa').innerText = data.justificativa;
-            document.getElementById('res-sugerida').innerText = data.resposta_sugerida;
-
-            const card = document.getElementById('card-status');
-            if (data.categoria === 'Produtivo') {
-                card.className = "p-5 rounded-lg border border-green-300 bg-green-50";
-            } else {
-                card.className = "p-5 rounded-lg border border-red-300 bg-red-50";
-            }
-        }
-
-        function limparAnalise() {
-            document.getElementById('texto-email').value = "";
-            document.getElementById('file-input').value = "";
-            document.getElementById('file-info').classList.add('hidden');
-            document.getElementById('resultado-container').classList.add('hidden');
-            document.getElementById('btn-enviar').disabled = false;
-            document.getElementById('btn-enviar').innerText = "Analisar E-mail";
-        }
-
-        document.getElementById('file-input').addEventListener('change', function() {
-            const info = document.getElementById('file-info');
-            if (this.files[0]) {
-                info.innerText = "Arquivo selecionado: " + this.files[0].name;
-                info.classList.remove('hidden');
-            }
-        });
-    </script>
-</body>
-</html>
+                if (response.ok) exibirResultado(data);
+                else alert("Erro: "
