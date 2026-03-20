@@ -47,18 +47,27 @@ def processar():
     try:
         # Chamada ao modelo Llama 3.1 via Groq
         chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Você é um assistente de triagem de emails. Responda APENAS em JSON puro com as chaves: categoria (Produtivo ou Improdutivo), justificativa e resposta_sugerida."
-                },
-                {
-                    "role": "user",
-                    "content": f"Analise este conteúdo: {texto_final}",
-                }
-            ],
+             
+
+        messages=[
+            {"role": "system", "content": """Você é um especialista em triagem de e-mails corporativos.
+            Sua tarefa é classificar o conteúdo em:
+            - **Produtivo**: E-mails que solicitam ações, contêm dúvidas pertinentes, agendamentos, feedbacks de projetos ou documentos importantes.
+            - **Improdutivo**: Spams, correntes, agradecimentos vazios (apenas 'obrigado'), propagandas não solicitadas ou mensagens sem nexo causal.
+            Responda APENAS em JSON puro com as chaves: categoria, justificativa e resposta_sugerida."""},
+            {"role": "user", "content": "Texto: 'Ganhe 50% de desconto em sapatos agora!'"},
+            {"role": "assistant", "content": '{"categoria": "Improdutivo", "justificativa": "Trata-se de propaganda comercial não solicitada.", "resposta_sugerida": "Nenhum retorno necessário."}'},
+            {"role": "user", "content": "Texto: 'Segue em anexo o relatório financeiro de março para revisão.'"},
+            {"role": "assistant", "content": '{"categoria": "Produtivo", "justificativa": "Envio de documento de trabalho que exige análise.", "resposta_sugerida": "Recebido. Vou analisar e retorno em breve."}'},
+            {"role": "user", "content": f"Analise este conteúdo: {texto_final}"}
+            ,{
+                "role": "user",
+                "content": f"Analise este conteúdo: {texto_final}",
+            }
+        ],
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"} # Isso garante que venha um JSON válido
+            
         )
 
         resultado = chat_completion.choices[0].message.content
