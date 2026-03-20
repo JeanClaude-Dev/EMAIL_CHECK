@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
-# Configuração Groq
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def extrair_texto_pdf(arquivo):
@@ -45,31 +44,44 @@ def processar():
         return jsonify({"error": "Conteúdo vazio"}), 400
 
     try:
-        # Chamada ao modelo Llama 3.1 via Groq
+        # Chamada ao modelo Llama 3.3 via Groq com Few-Shot Prompting
         chat_completion = client.chat.completions.create(
-             
-
-        messages=[
-            {"role": "system", "content": """Você é um especialista em triagem de e-mails corporativos.
-            Sua tarefa é classificar o conteúdo em:
-            - **Produtivo**: E-mails que solicitam ações, contêm dúvidas pertinentes, agendamentos, feedbacks de projetos ou documentos importantes.
-            - **Improdutivo**: Spams, correntes, agradecimentos vazios (apenas 'obrigado'), propagandas não solicitadas ou mensagens sem nexo causal.
-            Responda APENAS em JSON puro com as chaves: categoria, justificativa e resposta_sugerida."""},
-            {"role": "user", "content": "Texto: 'Ganhe 50% de desconto em sapatos agora!'"},
-            {"role": "assistant", "content": '{"categoria": "Improdutivo", "justificativa": "Trata-se de propaganda comercial não solicitada.", "resposta_sugerida": "Nenhum retorno necessário."}'},
-            {"role": "user", "content": "Texto: 'Segue em anexo o relatório financeiro de março para revisão.'"},
-            {"role": "assistant", "content": '{"categoria": "Produtivo", "justificativa": "Envio de documento de trabalho que exige análise.", "resposta_sugerida": "Recebido. Vou analisar e retorno em breve."}'},
-            {"role": "user", "content": f"Analise este conteúdo: {texto_final}"}
-            ,{
-                "role": "user",
-                "content": f"Analise este conteúdo: {texto_final}",
-            }
-        ],
             model="llama-3.3-70b-versatile",
-            response_format={"type": "json_object"} # Isso garante que venha um JSON válido
-            
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system", 
+                    "content": """Você é um especialista em triagem de e-mails corporativos.
+                    Sua tarefa é classificar o conteúdo em:
+                    - **Produtivo**: E-mails que solicitam ações, dúvidas, agendamentos ou documentos.
+                    - **Improdutivo**: Spams, correntes, agradecimentos vazios ou propagandas.
+                    Responda APENAS em JSON puro com as chaves: categoria, justificativa e resposta_sugerida."""
+                },
+                # Exemplos para "treinar" o comportamento (Few-Shot)
+                {
+                    "role": "user", 
+                    "content": "Texto: 'Ganhe 50% de desconto em sapatos agora!'"
+                },
+                {
+                    "role": "assistant", 
+                    "content": '{"categoria": "Improdutivo", "justificativa": "Propaganda comercial não solicitada.", "resposta_sugerida": "Nenhum retorno necessário."}'
+                },
+                {
+                    "role": "user", 
+                    "content": "Texto: 'Segue em anexo o relatório financeiro de março para revisão.'"
+                },
+                {
+                    "role": "assistant", 
+                    "content": '{"categoria": "Produtivo", "justificativa": "Envio de documento de trabalho que exige análise.", "resposta_sugerida": "Recebido. Vou analisar e retorno em breve."}'
+                },
+                # Entrada usuário
+                {
+                    "role": "user", 
+                    "content": f"Analise este conteúdo: {texto_final}"
+                }
+            ]
         )
-
+        
         resultado = chat_completion.choices[0].message.content
         return jsonify(json.loads(resultado))
 
@@ -77,5 +89,6 @@ def processar():
         return jsonify({"error": f"Erro no Groq: {str(e)}"}), 500
 
 if __name__ == '__main__':
+    # Configuração para deploy (Render) ou rodar localmente
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
