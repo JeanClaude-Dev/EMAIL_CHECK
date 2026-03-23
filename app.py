@@ -5,46 +5,50 @@ from groq import Groq
 from pypdf import PdfReader
 from dotenv import load_dotenv
 
+# Carrega variáveis de ambiente (.env)
 load_dotenv()
-app = Flask(__name__)
 
+app = Flask(__name__)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def extrair_texto_pdf(arquivo):
+    """Extrai texto de um arquivo PDF enviado."""
     try:
         leitor = PdfReader(arquivo)
         texto = ""
         for pagina in leitor.pages:
             content = pagina.extract_text()
-            if content: texto += content
+            if content:
+                texto += content
         return texto
     except Exception as e:
-        return f"Erro no PDF: {str(e)}"
+        return f"Erro ao processar PDF: {str(e)}"
 
 @app.route('/')
 def index():
+    """Rota principal que serve o seu index.html."""
     return render_template('index.html')
 
 @app.route('/processar', methods=['POST'])
 def processar():
+    """Rota que recebe os dados da interface e consulta a IA."""
     texto_final = ""
-
+    
+    # Verifica se há um arquivo ou texto manual
     if 'arquivo' in request.files:
         arquivo = request.files['arquivo']
-        if arquivo.filename != '':
-            if arquivo.filename.endswith('.pdf'):
-                texto_final = extrair_texto_pdf(arquivo)
-            elif arquivo.filename.endswith('.txt'):
-                texto_final = arquivo.read().decode('utf-8')
-    
-    if not texto_final:
+        if arquivo.filename.endswith('.pdf'):
+            texto_final = extrair_texto_pdf(arquivo)
+        elif arquivo.filename.endswith('.txt'):
+            texto_final = arquivo.read().decode('utf-8')
+    else:
         texto_final = request.form.get('texto', '')
 
     if not texto_final:
-        return jsonify({"error": "Conteúdo vazio"}), 400
+        return jsonify({"error": "Conteúdo vazio ou inválido"}), 400
 
     try:
-        # Chamada ao modelo Llama 3.3 via Groq com Few-Shot Prompting
+        # Chamada ao modelo Llama 
         chat_completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
@@ -81,14 +85,14 @@ def processar():
                 }
             ]
         )
-        
-        resultado = chat_completion.choices[0].message.content
-        return jsonify(json.loads(resultado))
+
+        resultado_ia = json.loads(chat_completion.choices[0].message.content)
+        return jsonify(resultado_ia)
 
     except Exception as e:
-        return jsonify({"error": f"Erro no Groq: {str(e)}"}), 500
+        return jsonify({"error": f"Erro na IA: {str(e)}"}), 500
 
-if __name__ == '__main__':
-    # Configuração para deploy (Render) ou rodar localmente
+if __name__ == "__main__":
+    # Porta padrão para o Render (usa a variável de ambiente PORT)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
