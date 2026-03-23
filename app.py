@@ -57,7 +57,7 @@ def processar():
                     - **Improdutivo**: Spams, correntes, agradecimentos vazios ou propagandas.
                     Responda APENAS em JSON puro com as chaves: categoria, justificativa e resposta_sugerida."""
                 },
-                # Exemplos para "treinar" o comportamento (Few-Shot)
+                # Exemplos para "treinar"  
                 {
                     "role": "user", 
                     "content": "Texto: 'Ganhe 50% de desconto em sapatos agora!'"
